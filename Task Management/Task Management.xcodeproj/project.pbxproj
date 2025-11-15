@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		
+		FE5716742EC72804003D7829 /* DynamicTasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5716732EC72804003D7829 /* DynamicTasksViewModel.swift */; };
+		FE5716762EC72807003D7829 /* EditTaskView_Products.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5716752EC72807003D7829 /* EditTaskView_Products.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		FEBAADED2EBF8F7B000AC150 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +30,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		
+		FE5716732EC72804003D7829 /* DynamicTasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicTasksViewModel.swift; sourceTree = "<group>"; };
+		FE5716752EC72807003D7829 /* EditTaskView_Products.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTaskView_Products.swift; sourceTree = "<group>"; };
 		FEBAADDF2EBF8F79000AC150 /* Task Management.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Task Management.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FEBAADEC2EBF8F7B000AC150 /* Task ManagementTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Task ManagementTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FEBAADF62EBF8F7B000AC150 /* Task ManagementUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Task ManagementUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -79,6 +88,9 @@
 				FEBAADEF2EBF8F7B000AC150 /* Task ManagementTests */,
 				FEBAADF92EBF8F7B000AC150 /* Task ManagementUITests */,
 				FEBAADE02EBF8F79000AC150 /* Products */,
+				
+				FE5716732EC72804003D7829 /* DynamicTasksViewModel.swift */,
+				FE5716752EC72807003D7829 /* EditTaskView_Products.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -236,6 +248,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE5716762EC72807003D7829 /* EditTaskView_Products.swift in Sources */,
+				
+				FE5716742EC72804003D7829 /* DynamicTasksViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,7 +337,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -380,7 +395,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -464,7 +479,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6ZX478VRZU;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "TrungAnhx.Task-ManagementTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -486,7 +501,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6ZX478VRZU;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "TrungAnhx.Task-ManagementTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
