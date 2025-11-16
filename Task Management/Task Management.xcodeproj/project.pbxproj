@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		
 		FE5716742EC72804003D7829 /* DynamicTasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5716732EC72804003D7829 /* DynamicTasksViewModel.swift */; };
 		FE5716762EC72807003D7829 /* EditTaskView_Products.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5716752EC72807003D7829 /* EditTaskView_Products.swift */; };
 /* End PBXBuildFile section */
@@ -30,7 +29,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		
 		FE5716732EC72804003D7829 /* DynamicTasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicTasksViewModel.swift; sourceTree = "<group>"; };
 		FE5716752EC72807003D7829 /* EditTaskView_Products.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTaskView_Products.swift; sourceTree = "<group>"; };
 		FEBAADDF2EBF8F79000AC150 /* Task Management.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Task Management.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -88,7 +86,6 @@
 				FEBAADEF2EBF8F7B000AC150 /* Task ManagementTests */,
 				FEBAADF92EBF8F7B000AC150 /* Task ManagementUITests */,
 				FEBAADE02EBF8F79000AC150 /* Products */,
-				
 				FE5716732EC72804003D7829 /* DynamicTasksViewModel.swift */,
 				FE5716752EC72807003D7829 /* EditTaskView_Products.swift */,
 			);
@@ -249,7 +246,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE5716762EC72807003D7829 /* EditTaskView_Products.swift in Sources */,
-				
 				FE5716742EC72804003D7829 /* DynamicTasksViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

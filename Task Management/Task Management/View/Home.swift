@@ -44,6 +44,12 @@ struct Home: View {
                                     onTapTask: { task in
                                         editingTask = task
                                         showEditor = true
+                                    },
+                                    onDeleteTask: { task in
+                                        viewModel.deleteTask(task)
+                                    },
+                                    onUpdateTask: { task in
+                                        viewModel.updateTask(task)
                                     }
                                 )
                                 .id(day.date as Date)
@@ -224,6 +230,8 @@ private struct WeekSection: View {
     let size: CGSize
     let tasksForDay: [TaskEntity]
     let onTapTask: (TaskEntity) -> Void
+    let onDeleteTask: (TaskEntity) -> Void
+    let onUpdateTask: (TaskEntity) -> Void
 
     var body: some View {
         Section {
@@ -233,10 +241,19 @@ private struct WeekSection: View {
                 } else {
                     // TaskEntity is Identifiable (id: UUID), so no need to supply id:
                     ForEach(tasksForDay) { task in
-                        TaskRowCard(task: task)
-                            .onTapGesture {
-                                onTapTask(task)
+                        TaskRowCard(
+                            task: task,
+                            onTapTask: onTapTask,
+                            onDelete: { toDelete in
+                                onDeleteTask(toDelete)
+                            },
+                            onUpdate: { toUpdate in
+                                onUpdateTask(toUpdate)
                             }
+                        )
+                        .onTapGesture {
+                            onTapTask(task)
+                        }
                     }
                 }
             }
@@ -244,7 +261,8 @@ private struct WeekSection: View {
             .padding(.leading, 70)
             .padding(.top, -70)
             .padding(.bottom, 10)
-            .frame(minHeight: isLast ? (size.height - 110) : nil, alignment: .top)
+            // Remove the minHeight to avoid the last card being stretched
+            //.frame(minHeight: isLast ? (size.height - 110) : nil, alignment: .top)
         } header: {
             let date = day.date
             VStack(spacing: 4) {
@@ -286,50 +304,6 @@ struct TaskRow: View {
     }
 }
 
-// Card that matches your old TaskRow style but shows real data
-struct TaskRowCard: View {
-    // TaskEntity is a value type, not an ObservableObject
-    let task: TaskEntity
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Circle()
-                .fill(task.isDone ? .green : .red)
-                .frame(width: 5, height: 5)
-
-            Text(task.title ?? "Untitled Task")
-                .font(.system(size: 14))
-                .fontWeight(.semibold)
-
-            HStack {
-                Text(timeRangeText)
-                Spacer(minLength: 0)
-                Text(task.location ?? "Unknown")
-            }
-            .font(.caption)
-            .foregroundStyle(.gray)
-            .padding(.top, 5)
-        }
-        .padding(15)
-        .lineLimit(1)
-        .background {
-            RoundedRectangle(cornerRadius: 15)
-                .fill(.background)
-                .shadow(color: Color.black.opacity(0.35), radius: 1)
-        }
-    }
-
-    private var timeRangeText: String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        let s = task.startTime.flatMap { f.string(from: $0) } ?? "--:--"
-        let e = task.endTime.flatMap { f.string(from: $0) } ?? "--:--"
-        return "\(s) - \(e)"
-    }
-}
-
-
-
 #Preview {
     Home()
 }
@@ -353,4 +327,3 @@ private struct SelectedDateChangeHandler: ViewModifier {
         }
     }
 }
-

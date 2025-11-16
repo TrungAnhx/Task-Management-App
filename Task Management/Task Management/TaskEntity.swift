@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TaskEntity: Identifiable, Codable {
+struct TaskEntity: Identifiable, Codable, Equatable {
     let id: UUID
     var date: Date?
     var endTime: Date?
@@ -26,5 +26,9 @@ struct TaskEntity: Identifiable, Codable {
         self.isDone = isDone
         self.location = location
         self.note = note
+    }
+    
+    static func == (lhs: TaskEntity, rhs: TaskEntity) -> Bool {
+        return lhs.id == rhs.id
     }
 }

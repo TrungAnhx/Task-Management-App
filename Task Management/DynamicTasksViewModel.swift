@@ -1,28 +1,42 @@
 import SwiftUI
+import Foundation
 import Combine
 
 @MainActor
 final class DynamicTasksViewModel: ObservableObject {
-    private let taskManager = TaskManager()
+    let taskManager = TaskManager()
+    
+    init() {
+        // Lắng nghe thay đổi từ TaskManager
+        taskManager.$tasks
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.tasks, on: self)
+            .store(in: &cancellables)
+    }
+    
     @Published var tasks: [TaskEntity] = []
+    private var cancellables = Set<AnyCancellable>()
 
     // Fetch tất cả task trong tuần chứa 'referenceDate'
     func fetchWeek(of referenceDate: Date?) {
-        tasks = taskManager.fetchWeek(of: referenceDate)
+        let fetchedTasks = taskManager.fetchWeek(of: referenceDate)
+        if tasks != fetchedTasks {
+            tasks = fetchedTasks
+        }
     }
 
     func addTask(on date: Date) {
         taskManager.addTask(on: date)
-        fetchWeek(of: nil) // Refresh the tasks list
+        // TaskManager sẽ tự động cập nhật tasks
     }
     
     func updateTask(_ task: TaskEntity) {
         taskManager.updateTask(task)
-        fetchWeek(of: nil) // Refresh the tasks list
+        // TaskManager sẽ tự động cập nhật tasks
     }
     
     func deleteTask(_ task: TaskEntity) {
         taskManager.deleteTask(task)
-        fetchWeek(of: nil) // Refresh the tasks list
+        // TaskManager sẽ tự động cập nhật tasks
     }
 }

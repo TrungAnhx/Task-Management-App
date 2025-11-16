@@ -12,9 +12,11 @@ class TaskManager: ObservableObject {
     @Published var tasks: [TaskEntity] = []
     
     private let tasksKey = "SavedTasks"
+    private var lastSavedWeek: String?
     
     init() {
         loadTasks()
+        checkAndResetForNewWeek()
     }
     
     func loadTasks() {
@@ -24,7 +26,31 @@ class TaskManager: ObservableObject {
                 return
             }
         }
-        self.tasks = []
+        
+        // Add sample tasks for first time users
+        let today = Calendar.current.startOfDay(for: Date())
+        let sampleTasks = [
+            TaskEntity(
+                title: "Morning Meeting",
+                date: today,
+                startTime: Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: today),
+                endTime: Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: today),
+                isDone: false,
+                location: "Office",
+                note: nil
+            ),
+            TaskEntity(
+                title: "Lunch with Team",
+                date: today,
+                startTime: Calendar.current.date(bySettingHour: 12, minute: 30, second: 0, of: today),
+                endTime: Calendar.current.date(bySettingHour: 14, minute: 0, second: 0, of: today),
+                isDone: false,
+                location: "Restaurant",
+                note: nil
+            )
+        ]
+        tasks = sampleTasks
+        saveTasks()
     }
     
     func saveTasks() {
@@ -69,7 +95,7 @@ class TaskManager: ObservableObject {
         let start = weekInterval.start
         let end = cal.date(byAdding: .day, value: 7, to: start) ?? start.addingTimeInterval(7 * 24 * 3600)
         
-        return tasks.filter { task in
+        let filteredTasks = tasks.filter { task in
             guard let taskDate = task.date else { return false }
             return taskDate >= start && taskDate < end
         }.sorted { 
@@ -85,6 +111,10 @@ class TaskManager: ObservableObject {
             
             return false
         }
+        
+        
+        
+        return filteredTasks
     }
     
     func tasks(for date: Date?) -> [TaskEntity] {
@@ -100,5 +130,24 @@ class TaskManager: ObservableObject {
             }
             return false
         }
+    }
+    
+    // Check if it's a new week and reset if needed
+    private func checkAndResetForNewWeek() {
+        let calendar = Calendar.current
+        let now = Date()
+        let currentWeekId = calendar.component(.weekOfYear, from: now)
+        
+        if let lastWeek = lastSavedWeek {
+            let lastWeekInt = Int(lastWeek) ?? 0
+            // If it's a new week, reset tasks
+            if currentWeekId > lastWeekInt || (currentWeekId == 1 && lastWeekInt > 50) {
+                tasks = []
+                saveTasks()
+            }
+        }
+        
+        lastSavedWeek = String(currentWeekId)
+        UserDefaults.standard.set(lastSavedWeek, forKey: "LastSavedWeek")
     }
 }
