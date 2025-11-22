@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 struct EditTaskView: View {
     @Environment(\.dismiss) private var dismiss
@@ -15,6 +16,10 @@ struct EditTaskView: View {
     @State private var hasStartTime: Bool = false
     @State private var hasEndTime: Bool = false
 
+    // Enhancements: Priority & Color Tag
+    @State private var priority: PriorityLevel = .medium
+    @State private var selectedColorHex: String = "#4F8EF7" // default blue
+
     var onDelete: ((TaskEntity) -> Void)?
     var onSave: ((TaskEntity) -> Void)?
 
@@ -26,41 +31,146 @@ struct EditTaskView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Basic") {
-                    TextField("Title", text: $title)
-                    TextField("Location", text: $location)
-                    Toggle("Done", isOn: $isDone)
-                }
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Basic Card
+                    CardSection(title: "Basic", systemImage: "square.and.pencil") {
+                        VStack(spacing: 12) {
+                            LabeledRow(icon: "textformat") {
+                                TextField("Title", text: $title)
+                                    .textInputAutocapitalization(.sentences)
+                                    .onChange(of: title) { newValue in
+                                        if newValue.count > 80 { title = String(newValue.prefix(80)) }
+                                    }
+                            }
+                            LabeledRow(icon: "mappin.and.ellipse") {
+                                TextField("Location (optional)", text: $location)
+                                    .textInputAutocapitalization(.words)
+                            }
+                            Divider().padding(.horizontal, -4)
+                            Toggle(isOn: $isDone) {
+                                Label(isDone ? "Done" : "Not Done", systemImage: isDone ? "checkmark.circle.fill" : "circle")
+                            }
+                            .tint(isDone ? .green : .orange)
 
-                Section("When") {
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-                    
-                    Toggle("Has Start Time", isOn: $hasStartTime)
-                    if hasStartTime {
-                        DatePicker("Start", selection: $startTime, displayedComponents: .hourAndMinute)
+                            if isOverdue(date: date, isDone: isDone) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                                    Text("Overdue")
+                                        .font(.caption).foregroundStyle(.orange)
+                                }
+                                .padding(.top, 2)
+                            }
+                        }
                     }
-                    
-                    Toggle("Has End Time", isOn: $hasEndTime)
-                    if hasEndTime {
-                        DatePicker("End", selection: $endTime, displayedComponents: .hourAndMinute)
-                    }
-                }
 
-                Section("Notes") {
-                    TextEditor(text: $note)
-                        .frame(minHeight: 100)
-                }
+                    // When Card
+                    CardSection(title: "When", systemImage: "calendar") {
+                        VStack(spacing: 12) {
+                            LabeledRow(icon: "calendar") {
+                                DatePicker("Date", selection: $date, displayedComponents: .date)
+                                    .labelsHidden()
+                            }
 
-                Section {
-                    Button(role: .destructive) {
-                        onDelete?(task)
-                        dismiss()
-                    } label: {
-                        Text("Delete Task")
+                            Toggle("Has Start Time", isOn: $hasStartTime)
+                            if hasStartTime {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "clock").foregroundStyle(.secondary)
+                                    DatePicker("Start", selection: $startTime, displayedComponents: .hourAndMinute)
+                                        .labelsHidden()
+                                    Spacer()
+                                    Button("Clear") { hasStartTime = false }
+                                        .buttonStyle(.bordered)
+                                }
+                                .onChange(of: startTime) { _ in
+                                    if hasEndTime && endTime < startTime { endTime = startTime }
+                                }
+                            }
+
+                            Toggle("Has End Time", isOn: $hasEndTime)
+                            if hasEndTime {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "clock.badge.checkmark").foregroundStyle(.secondary)
+                                    DatePicker("End", selection: $endTime, in: (hasStartTime ? startTime... : Date.distantPast...), displayedComponents: .hourAndMinute)
+                                        .labelsHidden()
+                                    Spacer()
+                                    Button("Clear") { hasEndTime = false }
+                                        .buttonStyle(.bordered)
+                                }
+                            }
+                        }
+                    }
+
+                    // Priority & Color Card
+                    CardSection(title: "Appearance", systemImage: "paintpalette") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Priority")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Picker("Priority", selection: $priority) {
+                                ForEach(PriorityLevel.allCases) { level in
+                                    Text(level.title).tag(level)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .tint(priority.tint)
+
+                            Divider().padding(.vertical, 4)
+
+                            Text("Color Tag")
+                                .font(.subheadline).foregroundStyle(.secondary)
+
+                            // Simple color choices
+                            HStack(spacing: 10) {
+                                ForEach(colorChoices, id: \.self) { hex in
+                                    Circle()
+                                        .fill(Color(hex: hex))
+                                        .frame(width: 28, height: 28)
+                                        .overlay(
+                                            Circle().strokeBorder(Color.primary.opacity(selectedColorHex == hex ? 0.8 : 0.15), lineWidth: selectedColorHex == hex ? 2 : 1)
+                                        )
+                                        .onTapGesture { selectedColorHex = hex }
+                                }
+                                Spacer()
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(hex: selectedColorHex))
+                                    .frame(width: 44, height: 28)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8).strokeBorder(Color.black.opacity(0.1), lineWidth: 1)
+                                    )
+                            }
+                        }
+                    }
+
+                    // Notes Card
+                    CardSection(title: "Notes", systemImage: "note.text") {
+                        ZStack(alignment: .topLeading) {
+                            if note.isEmpty {
+                                Text("Add notes (optional)")
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 8)
+                                    .padding(.horizontal, 4)
+                            }
+                            TextEditor(text: $note)
+                                .frame(minHeight: 140)
+                        }
+                    }
+
+                    // Delete Card
+                    CardSection {
+                        Button(role: .destructive) {
+                            onDelete?(task)
+                            dismiss()
+                        } label: {
+                            Label("Delete Task", systemImage: "trash")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
                     }
                 }
+                .padding(16)
             }
+            .background(LinearGradient(colors: [Color(.systemBackground), Color(.secondarySystemBackground)], startPoint: .top, endPoint: .bottom))
             .navigationTitle("Edit Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -70,6 +180,10 @@ struct EditTaskView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveAndDismiss() }
                         .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
                 }
             }
             .onAppear { loadFromTask() }
@@ -92,6 +206,18 @@ struct EditTaskView: View {
         if let end = task.endTime {
             endTime = end
         }
+        
+        // Try to read optional fields via KVC (Core Data backed)
+        if let managed = task as? NSManagedObject {
+            if let raw = managed.value(forKey: "priority") as? Int {
+                priority = PriorityLevel(rawValue: raw) ?? .medium
+            } else if let raw16 = managed.value(forKey: "priority") as? Int16 {
+                priority = PriorityLevel(rawValue: Int(raw16)) ?? .medium
+            }
+            if let color = (managed.value(forKey: "colorHex") as? String) ?? (managed.value(forKey: "color") as? String) {
+                selectedColorHex = color
+            }
+        }
     }
 
     private func saveAndDismiss() {
@@ -104,8 +230,130 @@ struct EditTaskView: View {
         updatedTask.location = location.isEmpty ? nil : location
         updatedTask.isDone = isDone
         
+        // Try to write optional fields via KVC if supported
+        if let managed = updatedTask as? NSManagedObject {
+            // Write priority as Int if possible, otherwise as Int16
+            if let _ = managed.entity.attributesByName["priority"],
+               let attributeType = managed.entity.attributesByName["priority"]?.attributeType {
+                switch attributeType {
+                case .integer16AttributeType:
+                    managed.setValue(Int16(priority.rawValue), forKey: "priority")
+                case .integer32AttributeType, .integer64AttributeType:
+                    managed.setValue(priority.rawValue, forKey: "priority")
+                default:
+                    break
+                }
+            }
+            // Prefer colorHex, fall back to color
+            if managed.entity.attributesByName.keys.contains("colorHex") {
+                managed.setValue(selectedColorHex, forKey: "colorHex")
+            } else if managed.entity.attributesByName.keys.contains("color") {
+                managed.setValue(selectedColorHex, forKey: "color")
+            }
+        }
+        
         task = updatedTask
         onSave?(updatedTask)
         dismiss()
+    }
+}
+
+private enum PriorityLevel: Int, CaseIterable, Identifiable {
+    case low = 0, medium = 1, high = 2
+    var id: Int { rawValue }
+    var title: String {
+        switch self { case .low: return "Low"; case .medium: return "Medium"; case .high: return "High" }
+    }
+    var tint: Color {
+        switch self { case .low: return .green; case .medium: return .orange; case .high: return .red }
+    }
+}
+
+private let colorChoices: [String] = [
+    "#4F8EF7", // blue
+    "#34C759", // green
+    "#FF9F0A", // orange
+    "#FF453A", // red
+    "#AF52DE", // purple
+    "#5AC8FA"  // light blue
+]
+
+private func isOverdue(date: Date, isDone: Bool) -> Bool {
+    guard !isDone else { return false }
+    let today = Calendar.current.startOfDay(for: .now)
+    let target = Calendar.current.startOfDay(for: date)
+    return target < today
+}
+
+private extension Color {
+    init(hex: String) {
+        let hexSanitized = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hexSanitized).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hexSanitized.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 122, 255)
+        }
+        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
+    }
+}
+
+private struct CardSection<Content: View>: View {
+    var title: String?
+    var systemImage: String?
+    @ViewBuilder var content: Content
+
+    init(title: String? = nil, systemImage: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.systemImage = systemImage
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let title, !title.isEmpty {
+                HStack(spacing: 8) {
+                    if let systemImage {
+                        Image(systemName: systemImage)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            content
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.black.opacity(0.06), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+        )
+    }
+}
+
+private struct LabeledRow<Content: View>: View {
+    var icon: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            content
+        }
     }
 }

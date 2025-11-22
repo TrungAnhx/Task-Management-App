@@ -20,6 +20,7 @@ struct Home: View {
     // Sheet/Edit
     @State private var editingTask: TaskEntity?
     @State private var showEditor: Bool = false
+    @State private var pendingTaskToEdit: TaskEntity?
 
     // Matched Geometry Effect
     @Namespace private var namespace
@@ -42,8 +43,12 @@ struct Home: View {
                                     size: size,
                                     tasksForDay: tasks(on: day.date),
                                     onTapTask: { task in
-                                        editingTask = task
-                                        showEditor = true
+                                        // Set pending first to avoid sheet showing with nil
+                                        pendingTaskToEdit = task
+                                        DispatchQueue.main.async {
+                                            editingTask = pendingTaskToEdit
+                                            showEditor = true
+                                        }
                                     },
                                     onDeleteTask: { task in
                                         viewModel.deleteTask(task)
@@ -113,6 +118,9 @@ struct Home: View {
             .allowsHitTesting(true)
         }
         .sheet(isPresented: $showEditor, onDismiss: {
+            // Clear selection to avoid stale references
+            pendingTaskToEdit = nil
+            editingTask = nil
             fetchTasks()
         }) {
             if let task = editingTask {
@@ -122,8 +130,11 @@ struct Home: View {
                     viewModel.updateTask(updatedTask)
                 })
             } else {
-                // Empty view to prevent sheet presentation issues
-                Text("No task selected")
+                // Auto-dismiss if no task is available to edit
+                Color.clear
+                    .onAppear {
+                        showEditor = false
+                    }
             }
         }
     }
@@ -136,6 +147,9 @@ struct Home: View {
     private func addTask() {
         let date = selectedDate ?? .now
         viewModel.addTask(on: date)
+        DispatchQueue.main.async {
+            self.fetchTasks()
+        }
     }
 
     // Trả về tasks theo đúng ngày trong tuần đang render
@@ -240,6 +254,8 @@ private struct WeekSection: View {
                     TaskRow(isEmpty: true)
                 } else {
                     // TaskEntity is Identifiable (id: UUID), so no need to supply id:
+
+                    // TaskRowCard should call onUpdate when user toggles done (checkbox)
                     ForEach(tasksForDay) { task in
                         TaskRowCard(
                             task: task,
@@ -251,9 +267,38 @@ private struct WeekSection: View {
                                 onUpdateTask(toUpdate)
                             }
                         )
+                        .contentShape(.rect)
                         .onTapGesture {
                             onTapTask(task)
                         }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                var updated = task
+                                // Toggle done state and propagate update
+                                updated.isDone.toggle()
+                                onUpdateTask(updated)
+                            } label: {
+                                if task.isDone {
+                                    Label("Undone", systemImage: "arrow.uturn.backward")
+                                } else {
+                                    Label("Done", systemImage: "checkmark")
+                                }
+                            }
+                            .tint(task.isDone ? .orange : .green)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                onDeleteTask(task)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
                     }
                 }
             }
@@ -327,3 +372,4 @@ private struct SelectedDateChangeHandler: ViewModifier {
         }
     }
 }
+

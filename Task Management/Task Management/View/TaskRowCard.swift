@@ -92,6 +92,7 @@ struct TaskRowCard: View {
             .padding(.vertical, 12)
         }
         .frame(minHeight: minRowHeight)
+        .allowsHitTesting(true)
         .contentShape(Rectangle())
         .onTapGesture {
             onTapTask(task)
