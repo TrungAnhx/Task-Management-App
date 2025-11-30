@@ -38,26 +38,25 @@ struct TaskRowCard: View {
                         .foregroundStyle(.white)
                         .frame(width: 80, height: minRowHeight)
                         .frame(maxHeight: .infinity)
-                        .background(task.isDone ? Color.gray : Color.green)
-                    }
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 0, topTrailingRadius: 0))
-                    .offset(x: offset > 80 ? offset - 80 : 0)
+                    .background(task.isDone ? Color.gray : Color.green)
                 }
-                
-                Spacer()
-                
-                ZStack(alignment: .trailing) {
-                    // Trailing Actions (Edit & Delete)
-                    HStack(spacing: 0) {
-                        Button {
-                            withAnimation(.snappy) {
-                                offset = 0
-                                isSwiped = false
-                            }
-                            onEdit?(task)
-                        } label: {
-                            VStack(spacing: 4) {
-                                Image(systemName: "pencil")
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 0, topTrailingRadius: 0))
+            }
+            
+            Spacer()
+            
+            ZStack(alignment: .trailing) {
+                // Trailing Actions (Edit & Delete)
+                HStack(spacing: 0) {
+                    Button {
+                        withAnimation(.snappy) {
+                            offset = 0
+                            isSwiped = false
+                        }
+                        onEdit?(task)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: "pencil")
                                 .font(.title2)
                             Text("Edit")
                                 .font(.caption)
@@ -88,7 +87,6 @@ struct TaskRowCard: View {
                     }
                 }
                 .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 14, topTrailingRadius: 14))
-                .offset(x: offset < -140 ? offset + 140 : 0)
             }
         }
 
@@ -197,16 +195,14 @@ struct TaskRowCard: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
-                        // Simple logic to limit drag with elasticity
+                        // Simple logic to limit drag with strict limits (no elasticity)
                         let translation = value.translation.width
                         if translation < 0 {
                             // Swipe Left (Edit/Delete - width 140)
-                            // Allow dragging up to -180 for elasticity
-                            offset = max(translation, -180)
+                            offset = max(translation, -140)
                         } else {
                             // Swipe Right (Complete - width 80)
-                            // Allow dragging up to 120 for elasticity
-                            offset = min(translation, 120)
+                            offset = min(translation, 80)
                         }
                     }
                     .onEnded { value in
