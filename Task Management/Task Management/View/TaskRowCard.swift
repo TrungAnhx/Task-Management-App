@@ -10,6 +10,7 @@ struct TaskRowCard: View {
     // Swipe State
     @State private var offset: CGFloat = 0
     @State private var isSwiped: Bool = false
+    @State private var swipeDirection: Int = 0 // 0: none, 1: right, -1: left
 
     // Increased height to comfortably display title + 2-line note + metadata
     private let minRowHeight: CGFloat = 96
@@ -195,28 +196,56 @@ struct TaskRowCard: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
-                        // Simple logic to limit drag with strict limits (no elasticity)
                         let translation = value.translation.width
-                        if translation < 0 {
-                            // Swipe Left (Edit/Delete - width 140)
-                            offset = max(translation, -140)
-                        } else {
-                            // Swipe Right (Complete - width 80)
-                            offset = min(translation, 80)
+                        
+                        // Determine direction on first move if starting from closed
+                        if !isSwiped && swipeDirection == 0 && abs(translation) > 0 {
+                            swipeDirection = translation > 0 ? 1 : -1
                         }
+                        
+                        // Calculate proposed offset
+                        var newOffset: CGFloat
+                        if isSwiped {
+                            // If starting open, add translation to current resting offset
+                            let startOffset: CGFloat = offset > 0 ? 80 : -140
+                            newOffset = startOffset + translation
+                        } else {
+                            newOffset = translation
+                        }
+                        
+                        // Apply constraints based on direction/state
+                        if isSwiped {
+                            // If currently swiped RIGHT (positive), don't let it go negative
+                            if offset > 0 {
+                                newOffset = max(0, min(newOffset, 80))
+                            }
+                            // If currently swiped LEFT (negative), don't let it go positive
+                            else {
+                                newOffset = min(0, max(newOffset, -140))
+                            }
+                        } else {
+                            // If starting closed, strictly follow the locked direction
+                            if swipeDirection == 1 {
+                                newOffset = max(0, min(newOffset, 80))
+                            } else if swipeDirection == -1 {
+                                newOffset = min(0, max(newOffset, -140))
+                            } else {
+                                newOffset = 0
+                            }
+                        }
+                        
+                        offset = newOffset
                     }
                     .onEnded { value in
+                        swipeDirection = 0
                         withAnimation(.snappy) {
-                            if value.translation.width < -80 {
-                                // Snap to Edit/Delete options
-                                offset = -140 // Width of 2 buttons (70+70)
+                            if offset < -70 { // Threshold for opening left (140/2)
+                                offset = -140
                                 isSwiped = true
-                            } else if value.translation.width > 60 {
-                                // Snap to Complete
+                            } else if offset > 40 { // Threshold for opening right (80/2)
                                 offset = 80
                                 isSwiped = true
                             } else {
-                                // Reset
                                 offset = 0
                                 isSwiped = false
                             }

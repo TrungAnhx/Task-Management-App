@@ -155,31 +155,15 @@ struct EditTaskView: View {
                                 .frame(minHeight: 140)
                         }
                     }
-
-                    // Delete Card
-                    CardSection {
-                        Button(role: .destructive) {
-                            showDeleteConfirmation = true
-                        } label: {
-                            Label("Delete Task", systemImage: "trash")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.red)
-                    }
                 }
                 .padding(16)
             }
             .background(LinearGradient(colors: [Color(.systemBackground), Color(.secondarySystemBackground)], startPoint: .top, endPoint: .bottom))
-            .navigationTitle("Edit Task")
+            .navigationTitle("Task Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveAndDismiss() }
-                        .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("OK") { saveAndDismiss() }
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -187,15 +171,6 @@ struct EditTaskView: View {
                 }
             }
             .onAppear { loadFromTask() }
-            .alert("Delete Task", isPresented: $showDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
-                    onDelete?(task)
-                    dismiss()
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Are you sure you want to delete this task?")
-            }
         }
     }
 
