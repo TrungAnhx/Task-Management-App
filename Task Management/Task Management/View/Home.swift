@@ -44,6 +44,9 @@ struct Home: View {
                                     onDelete: { task in
                                         viewModel.deleteTask(task)
                                     },
+                                    onEdit: { task in
+                                        editingTask = task
+                                    },
                                     onUpdate: { task in
                                         viewModel.updateTask(task)
                                     }
@@ -300,6 +303,7 @@ private struct DailyRowView: View {
     let tasks: [TaskEntity]
     let onTap: (TaskEntity) -> Void
     let onDelete: (TaskEntity) -> Void
+    let onEdit: (TaskEntity) -> Void
     let onUpdate: (TaskEntity) -> Void
 
     var body: some View {
@@ -349,6 +353,7 @@ private struct DailyRowView: View {
                             task: task,
                             onTapTask: onTap,
                             onDelete: onDelete,
+                            onEdit: onEdit,
                             onUpdate: onUpdate
                         )
                     }

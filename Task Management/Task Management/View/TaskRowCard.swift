@@ -4,125 +4,239 @@ struct TaskRowCard: View {
     let task: TaskEntity
     let onTapTask: (TaskEntity) -> Void
     var onDelete: ((TaskEntity) -> Void)? = nil
+    var onEdit: ((TaskEntity) -> Void)? = nil
     var onUpdate: ((TaskEntity) -> Void)? = nil
+
+    // Swipe State
+    @State private var offset: CGFloat = 0
+    @State private var isSwiped: Bool = false
 
     // Increased height to comfortably display title + 2-line note + metadata
     private let minRowHeight: CGFloat = 96
 
     var body: some View {
         ZStack {
-            // Background card with subtle border and shadow (Notes-like)
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            // Swipe Actions Background
+            HStack {
+                ZStack(alignment: .leading) {
+                    // Leading Action (Complete/Incomplete)
+                    Button {
+                        withAnimation(.snappy) {
+                            offset = 0
+                            isSwiped = false
+                        }
+                        var toggled = task
+                        toggled.isDone.toggle()
+                        onUpdate?(toggled)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: task.isDone ? "arrow.uturn.backward" : "checkmark")
+                                .font(.title2)
+                            Text(task.isDone ? "Undo" : "Done")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: 80, height: minRowHeight)
+                        .frame(maxHeight: .infinity)
+                        .background(task.isDone ? Color.gray : Color.green)
+                    }
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 0, topTrailingRadius: 0))
+                    .offset(x: offset > 80 ? offset - 80 : 0)
+                }
+                
+                Spacer()
+                
+                ZStack(alignment: .trailing) {
+                    // Trailing Actions (Edit & Delete)
+                    HStack(spacing: 0) {
+                        Button {
+                            withAnimation(.snappy) {
+                                offset = 0
+                                isSwiped = false
+                            }
+                            onEdit?(task)
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: "pencil")
+                                .font(.title2)
+                            Text("Edit")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: 70, height: minRowHeight)
+                        .frame(maxHeight: .infinity)
+                        .background(Color.orange)
+                    }
+                    
+                    Button {
+                        withAnimation(.snappy) {
+                            offset = 0
+                            isSwiped = false
+                        }
+                        onDelete?(task)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: "trash")
+                                .font(.title2)
+                            Text("Delete")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: 70, height: minRowHeight)
+                        .frame(maxHeight: .infinity)
+                        .background(Color.red)
+                    }
+                }
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 14, topTrailingRadius: 14))
+                .offset(x: offset < -140 ? offset + 140 : 0)
+            }
+        }
+
+            // Main Card Content
+            ZStack {
+                // Background card with subtle border and shadow (Notes-like)
+                UnevenRoundedRectangle(
+                    topLeadingRadius: offset > 0 ? 0 : 14,
+                    bottomLeadingRadius: offset > 0 ? 0 : 14,
+                    bottomTrailingRadius: offset < 0 ? 0 : 14,
+                    topTrailingRadius: offset < 0 ? 0 : 14,
+                    style: .continuous
+                )
                 .fill(Color(.secondarySystemBackground))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color(.separator).opacity(0.45), lineWidth: 0.8)
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: offset > 0 ? 0 : 14,
+                        bottomLeadingRadius: offset > 0 ? 0 : 14,
+                        bottomTrailingRadius: offset < 0 ? 0 : 14,
+                        topTrailingRadius: offset < 0 ? 0 : 14,
+                        style: .continuous
+                    )
+                    .strokeBorder(Color(.separator).opacity(0.45), lineWidth: 0.8)
                 )
                 .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
 
-            HStack(alignment: .top, spacing: 12) {
-                // Completion indicator with color
-                ZStack {
-                    Circle()
-                        .fill(task.isDone ? Color.green.opacity(0.2) : Color(hex: task.colorHex).opacity(0.15))
-                        .frame(width: 24, height: 24)
-                    Circle()
-                        .strokeBorder(task.isDone ? Color.green : Color(hex: task.colorHex), lineWidth: 2)
-                        .frame(width: 24, height: 24)
-                    if task.isDone {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.green)
-                    } else {
-                        // Priority indicator
-                        Text(task.priority.title.first?.uppercased() ?? "M")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color(hex: task.colorHex))
+                HStack(alignment: .top, spacing: 12) {
+                    // Completion indicator with color
+                    ZStack {
+                        Circle()
+                            .fill(task.isDone ? Color.green.opacity(0.2) : Color(hex: task.colorHex).opacity(0.15))
+                            .frame(width: 24, height: 24)
+                        Circle()
+                            .strokeBorder(task.isDone ? Color.green : Color(hex: task.colorHex), lineWidth: 2)
+                            .frame(width: 24, height: 24)
+                        if task.isDone {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.green)
+                        } else {
+                            // Priority indicator
+                            Text(task.priority.title.first?.uppercased() ?? "M")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color(hex: task.colorHex))
+                        }
                     }
-                }
-                .padding(.top, 2)
+                    .padding(.top, 2)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    // Title
-                    Text((task.title?.isEmpty == false ? task.title : "Untitled") ?? "Untitled")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .contentTransition(.opacity)
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Title
+                        Text((task.title?.isEmpty == false ? task.title : "Untitled") ?? "Untitled")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .contentTransition(.opacity)
 
-                    // Note preview (2 lines)
-                    if let note = task.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(note)
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                            .transition(.opacity)
-                    }
+                        // Note preview (2 lines)
+                        if let note = task.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text(note)
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .transition(.opacity)
+                        }
 
-                    // Metadata: time range / date and location
-                    HStack(spacing: 10) {
-                        if let date = task.date {
-                            if let start = task.startTime, let end = task.endTime {
-                                Label("\(timeString(from: start)) – \(timeString(from: end))", systemImage: "clock")
+                        // Metadata: time range / date and location
+                        HStack(spacing: 10) {
+                            if let date = task.date {
+                                if let start = task.startTime, let end = task.endTime {
+                                    Label("\(timeString(from: start)) – \(timeString(from: end))", systemImage: "clock")
+                                        .labelStyle(.iconOnlyIfCompact)
+                                } else if let start = task.startTime {
+                                    Label(timeString(from: start), systemImage: "clock")
+                                        .labelStyle(.iconOnlyIfCompact)
+                                } else {
+                                    Label(dateString(from: date), systemImage: "calendar")
+                                        .labelStyle(.iconOnlyIfCompact)
+                                }
+                            }
+
+                            if let location = task.location, !location.isEmpty {
+                                Label(location, systemImage: "mappin.and.ellipse")
                                     .labelStyle(.iconOnlyIfCompact)
-                            } else if let start = task.startTime {
-                                Label(timeString(from: start), systemImage: "clock")
-                                    .labelStyle(.iconOnlyIfCompact)
-                            } else {
-                                Label(dateString(from: date), systemImage: "calendar")
-                                    .labelStyle(.iconOnlyIfCompact)
+                                    .lineLimit(1)
                             }
                         }
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                    }
 
-                        if let location = task.location, !location.isEmpty {
-                            Label(location, systemImage: "mappin.and.ellipse")
-                                .labelStyle(.iconOnlyIfCompact)
-                                .lineLimit(1)
+                    Spacer()
+
+                    // Accessory chevron
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.tertiaryLabel)
+                        .padding(.top, 2)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+            .frame(minHeight: minRowHeight)
+            .background(Color(.systemBackground)) // Ensure opacity
+            .offset(x: offset)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        // Simple logic to limit drag with elasticity
+                        let translation = value.translation.width
+                        if translation < 0 {
+                            // Swipe Left (Edit/Delete - width 140)
+                            // Allow dragging up to -180 for elasticity
+                            offset = max(translation, -180)
+                        } else {
+                            // Swipe Right (Complete - width 80)
+                            // Allow dragging up to 120 for elasticity
+                            offset = min(translation, 120)
                         }
                     }
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                // Accessory chevron
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.tertiaryLabel)
-                    .padding(.top, 2)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-        }
-        .frame(minHeight: minRowHeight)
-        .allowsHitTesting(true)
-        .contentShape(Rectangle())
-        .animation(.snappy(duration: 0.2, extraBounce: 0), value: task.isDone)
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                onDelete?(task)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button {
-                var toggled = task
-                toggled.isDone.toggle()
-                onUpdate?(toggled)
-            } label: {
-                if task.isDone {
-                    Label("Mark Incomplete", systemImage: "circle")
+                    .onEnded { value in
+                        withAnimation(.snappy) {
+                            if value.translation.width < -80 {
+                                // Snap to Edit/Delete options
+                                offset = -140 // Width of 2 buttons (70+70)
+                                isSwiped = true
+                            } else if value.translation.width > 60 {
+                                // Snap to Complete
+                                offset = 80
+                                isSwiped = true
+                            } else {
+                                // Reset
+                                offset = 0
+                                isSwiped = false
+                            }
+                        }
+                    }
+            )
+            .onTapGesture {
+                if isSwiped {
+                    withAnimation(.snappy) {
+                        offset = 0
+                        isSwiped = false
+                    }
                 } else {
-                    Label("Mark Complete", systemImage: "checkmark.circle.fill")
+                    onTapTask(task)
                 }
             }
-            .tint(task.isDone ? .gray : .green)
-        }
-        .onTapGesture {
-            onTapTask(task)
         }
     }
 
