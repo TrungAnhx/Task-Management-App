@@ -19,8 +19,6 @@ struct Home: View {
 
     // Sheet/Edit
     @State private var editingTask: TaskEntity?
-    @State private var showEditor: Bool = false
-    @State private var pendingTaskToEdit: TaskEntity?
 
     // Matched Geometry Effect
     @Namespace private var namespace
@@ -35,45 +33,41 @@ struct Home: View {
                     let size = proxy.size
 
                     ScrollView(.vertical) {
-                        LazyVStack(spacing: 15, pinnedViews: [.sectionHeaders]) {
+                        VStack(spacing: 20) {
                             ForEach(currentWeek) { day in
-                                WeekSection(
+                                DailyRowView(
                                     day: day,
-                                    isLast: currentWeek.last?.id == day.id,
-                                    size: size,
-                                    tasksForDay: tasks(on: day.date),
-                                    onTapTask: { task in
-                                        // Set pending first to avoid sheet showing with nil
-                                        pendingTaskToEdit = task
-                                        DispatchQueue.main.async {
-                                            editingTask = pendingTaskToEdit
-                                            showEditor = true
-                                        }
+                                    tasks: tasks(on: day.date),
+                                    onTap: { task in
+                                        editingTask = task
                                     },
-                                    onDeleteTask: { task in
+                                    onDelete: { task in
                                         viewModel.deleteTask(task)
                                     },
-                                    onUpdateTask: { task in
+                                    onUpdate: { task in
                                         viewModel.updateTask(task)
                                     }
                                 )
-                                .id(day.date as Date)
                             }
+                            
+                            // Add empty space at bottom to allow last day to scroll to top
+                            Color.clear
+                                .frame(height: size.height - 80)
                         }
                         .scrollTargetLayout()
                     }
-                    .contentMargins(.all , 20, for: .scrollContent)
-                    .contentMargins(.vertical , 20, for: .scrollIndicators)
-                    .scrollPosition(id: Binding<Date?>(
+                    .contentMargins(20, for: .scrollContent)
+                    .scrollPosition(id: Binding(
                         get: { scrollTarget },
                         set: { newValue in
                             scrollTarget = newValue
-                            selectedDate = newValue
-                            fetchTasks()
+                            if let date = newValue {
+                                selectedDate = date
+                            }
                         }
                     ), anchor: .top)
                     .safeAreaPadding(.bottom, 70)
-                    .padding(.bottom, -70)
+                    .padding(.bottom, 100)
                 }
                 .background(.background)
                 .clipShape(UnevenRoundedRectangle(topLeadingRadius: 30, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 30, style: .continuous))
@@ -86,23 +80,20 @@ struct Home: View {
                     guard self.selectedDate == nil else { return }
                     self.selectedDate = self.currentWeek.first(where: { $0.date.isSame(.now) })?.date
                     self.scrollTarget = self.selectedDate
-                    self.fetchTasks()
                 }
             }
-            // Replace deprecated onChange(of:perform:) with iOS 17 form, with fallback
-            .modifier(SelectedDateChangeHandler(selectedDate: $selectedDate, onChange: { 
-                DispatchQueue.main.async {
-                    self.fetchTasks()
-                }
-            }))
 
-            // Floating add button
+            // Floating add button in bottom right corner
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     Button {
-                        addTask()
+                        // Add task for selected date
+                        let date = selectedDate ?? Date()
+                        if tasks(on: date).count < 5 {
+                            viewModel.addTask(on: date)
+                        }
                     } label: {
                         Image(systemName: "plus")
                             .font(.title2.weight(.semibold))
@@ -117,38 +108,12 @@ struct Home: View {
             }
             .allowsHitTesting(true)
         }
-        .sheet(isPresented: $showEditor, onDismiss: {
-            // Clear selection to avoid stale references
-            pendingTaskToEdit = nil
-            editingTask = nil
-            fetchTasks()
-        }) {
-            if let task = editingTask {
-                EditTaskView(task: task, onDelete: { toDelete in
-                    viewModel.deleteTask(toDelete)
-                }, onSave: { updatedTask in
-                    viewModel.updateTask(updatedTask)
-                })
-            } else {
-                // Auto-dismiss if no task is available to edit
-                Color.clear
-                    .onAppear {
-                        showEditor = false
-                    }
-            }
-        }
-    }
-
-    private func fetchTasks() {
-        // Fetch toàn bộ task trong tuần chứa selectedDate
-        viewModel.fetchWeek(of: selectedDate)
-    }
-
-    private func addTask() {
-        let date = selectedDate ?? .now
-        viewModel.addTask(on: date)
-        DispatchQueue.main.async {
-            self.fetchTasks()
+        .sheet(item: $editingTask) { task in
+            EditTaskView(task: task, onDelete: { toDelete in
+                viewModel.deleteTask(toDelete)
+            }, onSave: { updatedTask in
+                viewModel.updateTask(updatedTask)
+            })
         }
     }
 
@@ -238,7 +203,7 @@ struct Home: View {
     }
 }
 
-private struct WeekSection: View {
+private struct WeekDaySection: View {
     let day: Date.Day
     let isLast: Bool
     let size: CGSize
@@ -246,16 +211,41 @@ private struct WeekSection: View {
     let onTapTask: (TaskEntity) -> Void
     let onDeleteTask: (TaskEntity) -> Void
     let onUpdateTask: (TaskEntity) -> Void
+    let onAddTaskForDay: (Date) -> Void
 
     var body: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 15) {
+        HStack(alignment: .top, spacing: 0) {
+            // Left side: Date column
+            let date = day.date
+            VStack(spacing: 0) {
+                VStack(spacing: 4) {
+                    Text(date.string("EEE"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Text(date.string("dd"))
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+                .frame(width: 56)
+            }
+            .frame(width: 60, alignment: .leading)
+            
+            // Divider between columns
+            Rectangle()
+                .fill(Color(.separator))
+                .frame(width: 2)
+                .padding(.vertical, 12)
+            
+            // Right side: Tasks for this day
+            VStack(alignment: .leading, spacing: 0) {
                 if tasksForDay.isEmpty {
-                    TaskRow(isEmpty: true)
+                    // Show message when no tasks
+                    Text("No tasks added...")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding()
+                    .frame(height: 80)
                 } else {
-                    // TaskEntity is Identifiable (id: UUID), so no need to supply id:
-
-                    // TaskRowCard should call onUpdate when user toggles done (checkbox)
                     ForEach(tasksForDay) { task in
                         TaskRowCard(
                             task: task,
@@ -267,58 +257,14 @@ private struct WeekSection: View {
                                 onUpdateTask(toUpdate)
                             }
                         )
-                        .contentShape(.rect)
-                        .onTapGesture {
-                            onTapTask(task)
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                            Button {
-                                var updated = task
-                                // Toggle done state and propagate update
-                                updated.isDone.toggle()
-                                onUpdateTask(updated)
-                            } label: {
-                                if task.isDone {
-                                    Label("Undone", systemImage: "arrow.uturn.backward")
-                                } else {
-                                    Label("Done", systemImage: "checkmark")
-                                }
-                            }
-                            .tint(task.isDone ? .orange : .green)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                onDeleteTask(task)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(.ultraThinMaterial)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
                     }
                 }
+                
+                Spacer()
             }
-            .frame(maxWidth: .infinity)
-            .padding(.leading, 70)
-            .padding(.top, -70)
-            .padding(.bottom, 10)
-            // Remove the minHeight to avoid the last card being stretched
-            //.frame(minHeight: isLast ? (size.height - 110) : nil, alignment: .top)
-        } header: {
-            let date = day.date
-            VStack(spacing: 4) {
-                Text(date.string("EEE"))
-
-                Text(date.string("dd"))
-                    .font(.largeTitle.bold())
-            }
-            .frame(width: 56, height: 70)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.horizontal, 40)
+        .padding(.vertical, 12)
     }
 }
 
@@ -349,27 +295,73 @@ struct TaskRow: View {
     }
 }
 
-#Preview {
-    Home()
+private struct DailyRowView: View {
+    let day: Date.Day
+    let tasks: [TaskEntity]
+    let onTap: (TaskEntity) -> Void
+    let onDelete: (TaskEntity) -> Void
+    let onUpdate: (TaskEntity) -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            // Left side: Date column
+            let date = day.date
+            VStack(spacing: 0) {
+                VStack(spacing: 4) {
+                    Text(date.string("EEE"))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Text(date.string("dd"))
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+                .frame(width: 56)
+            }
+            .frame(width: 80, alignment: .leading)
+            
+            // Divider
+            Rectangle()
+                .fill(Color(.separator))
+                .frame(width: 1)
+                .padding(.vertical, 12)
+            
+            // Right side: Tasks
+            VStack(alignment: .leading, spacing: 12) {
+                if tasks.isEmpty {
+                    // Empty State Card
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color(.secondarySystemBackground))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .strokeBorder(Color(.separator).opacity(0.45), lineWidth: 0.8)
+                            )
+                            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
+                        
+                        Text("No tasks added...")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 70)
+                } else {
+                    ForEach(tasks) { task in
+                        TaskRowCard(
+                            task: task,
+                            onTapTask: onTap,
+                            onDelete: onDelete,
+                            onUpdate: onUpdate
+                        )
+                    }
+                }
+            }
+            .padding(.leading, 20)
+            .padding(.trailing, 15) // Add trailing padding for better edge spacing
+        }
+        .id(day.date as Date)
+    }
 }
 
-// MARK: - Helper to bridge onChange API differences
-private struct SelectedDateChangeHandler: ViewModifier {
-    @Binding var selectedDate: Date?
-    let onChange: () -> Void
-
-    func body(content: Content) -> some View {
-        if #available(iOS 17.0, *) {
-            content
-                .onChange(of: selectedDate) {
-                    onChange()
-                }
-        } else {
-            content
-                .onChange(of: selectedDate) { _ in
-                    onChange()
-                }
-        }
-    }
+#Preview {
+    Home()
 }
 

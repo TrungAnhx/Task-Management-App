@@ -12,11 +12,8 @@ class TaskManager: ObservableObject {
     @Published var tasks: [TaskEntity] = []
     
     private let tasksKey = "SavedTasks"
-    private var lastSavedWeek: String?
-    
     init() {
         loadTasks()
-        checkAndResetForNewWeek()
     }
     
     func loadTasks() {
@@ -37,7 +34,9 @@ class TaskManager: ObservableObject {
                 endTime: Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: today),
                 isDone: false,
                 location: "Office",
-                note: nil
+                note: nil,
+                priority: .high,
+                colorHex: "#4F8EF7"
             ),
             TaskEntity(
                 title: "Lunch with Team",
@@ -46,7 +45,9 @@ class TaskManager: ObservableObject {
                 endTime: Calendar.current.date(bySettingHour: 14, minute: 0, second: 0, of: today),
                 isDone: false,
                 location: "Restaurant",
-                note: nil
+                note: nil,
+                priority: .medium,
+                colorHex: "#34C759"
             )
         ]
         tasks = sampleTasks
@@ -67,7 +68,9 @@ class TaskManager: ObservableObject {
             endTime: nil,
             isDone: false,
             location: nil,
-            note: nil
+            note: nil,
+            priority: .medium,
+            colorHex: "#4F8EF7"
         )
         
         tasks.append(newTask)
@@ -130,24 +133,5 @@ class TaskManager: ObservableObject {
             }
             return false
         }
-    }
-    
-    // Check if it's a new week and reset if needed
-    private func checkAndResetForNewWeek() {
-        let calendar = Calendar.current
-        let now = Date()
-        let currentWeekId = calendar.component(.weekOfYear, from: now)
-        
-        if let lastWeek = lastSavedWeek {
-            let lastWeekInt = Int(lastWeek) ?? 0
-            // If it's a new week, reset tasks
-            if currentWeekId > lastWeekInt || (currentWeekId == 1 && lastWeekInt > 50) {
-                tasks = []
-                saveTasks()
-            }
-        }
-        
-        lastSavedWeek = String(currentWeekId)
-        UserDefaults.standard.set(lastSavedWeek, forKey: "LastSavedWeek")
     }
 }

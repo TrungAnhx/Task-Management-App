@@ -1,36 +1,45 @@
-//
-//  MinimalTest.swift
-//  Task Management
-//
-//  Created by TrungAnhx on 8/11/25.
-//
-
 import SwiftUI
 
-// Simple test view to verify the app launches without Core Data
-struct MinimalTest: View {
+struct MinimalSwipeTest: View {
+    @State private var tasks = [
+        TaskEntity(title: "Test Task 1", date: Date(), isDone: false),
+        TaskEntity(title: "Test Task 2", date: Date(), isDone: true)
+    ]
+    
     var body: some View {
-        VStack {
-            Text("Minimal Test View")
-                .font(.largeTitle)
-                .padding()
-            
-            Text("If you can see this, the app launches without crashing")
-                .multilineTextAlignment(.center)
-                .padding()
-            
-            Button("Test Button") {
-                print("Button pressed successfully")
+        NavigationView {
+            List {
+                ForEach(tasks) { task in
+                    VStack {
+                        Text(task.title ?? "No Title")
+                            .font(.headline)
+                        Text(task.isDone ? "Done" : "Not Done")
+                            .font(.caption)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            tasks.removeAll { $0.id == task.id }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+                                tasks[index].isDone.toggle()
+                            }
+                        } label: {
+                            Label(task.isDone ? "Undone" : "Done", systemImage: task.isDone ? "arrow.uturn.backward" : "checkmark")
+                        }
+                        .tint(task.isDone ? .orange : .green)
+                    }
+                }
             }
-            .padding()
-            .background(Color.blue)
-            .foregroundColor(.white)
-            .cornerRadius(8)
+            .navigationTitle("Swipe Test")
         }
-        .padding()
     }
 }
 
 #Preview {
-    MinimalTest()
+    MinimalSwipeTest()
 }

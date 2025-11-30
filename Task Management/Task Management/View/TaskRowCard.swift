@@ -21,18 +21,23 @@ struct TaskRowCard: View {
                 .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
 
             HStack(alignment: .top, spacing: 12) {
-                // Completion indicator
+                // Completion indicator with color
                 ZStack {
                     Circle()
-                        .fill(task.isDone ? Color.green.opacity(0.2) : Color.clear)
+                        .fill(task.isDone ? Color.green.opacity(0.2) : Color(hex: task.colorHex).opacity(0.15))
                         .frame(width: 24, height: 24)
                     Circle()
-                        .strokeBorder(task.isDone ? Color.green : Color.gray.opacity(0.45), lineWidth: 2)
+                        .strokeBorder(task.isDone ? Color.green : Color(hex: task.colorHex), lineWidth: 2)
                         .frame(width: 24, height: 24)
                     if task.isDone {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.green)
+                    } else {
+                        // Priority indicator
+                        Text(task.priority.title.first?.uppercased() ?? "M")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color(hex: task.colorHex))
                     }
                 }
                 .padding(.top, 2)
@@ -94,9 +99,6 @@ struct TaskRowCard: View {
         .frame(minHeight: minRowHeight)
         .allowsHitTesting(true)
         .contentShape(Rectangle())
-        .onTapGesture {
-            onTapTask(task)
-        }
         .animation(.snappy(duration: 0.2, extraBounce: 0), value: task.isDone)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
@@ -105,7 +107,7 @@ struct TaskRowCard: View {
                 Label("Delete", systemImage: "trash")
             }
         }
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
             Button {
                 var toggled = task
                 toggled.isDone.toggle()
@@ -118,6 +120,9 @@ struct TaskRowCard: View {
                 }
             }
             .tint(task.isDone ? .gray : .green)
+        }
+        .onTapGesture {
+            onTapTask(task)
         }
     }
 

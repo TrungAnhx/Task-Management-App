@@ -15,6 +15,7 @@ struct EditTaskView: View {
     @State private var isDone: Bool = false
     @State private var hasStartTime: Bool = false
     @State private var hasEndTime: Bool = false
+    @State private var showDeleteConfirmation = false
 
     // Enhancements: Priority & Color Tag
     @State private var priority: PriorityLevel = .medium
@@ -39,8 +40,8 @@ struct EditTaskView: View {
                             LabeledRow(icon: "textformat") {
                                 TextField("Title", text: $title)
                                     .textInputAutocapitalization(.sentences)
-                                    .onChange(of: title) { newValue in
-                                        if newValue.count > 80 { title = String(newValue.prefix(80)) }
+                                    .onChange(of: title) {
+                                        if title.count > 80 { title = String(title.prefix(80)) }
                                     }
                             }
                             LabeledRow(icon: "mappin.and.ellipse") {
@@ -82,7 +83,7 @@ struct EditTaskView: View {
                                     Button("Clear") { hasStartTime = false }
                                         .buttonStyle(.bordered)
                                 }
-                                .onChange(of: startTime) { _ in
+                                .onChange(of: startTime) {
                                     if hasEndTime && endTime < startTime { endTime = startTime }
                                 }
                             }
@@ -158,8 +159,7 @@ struct EditTaskView: View {
                     // Delete Card
                     CardSection {
                         Button(role: .destructive) {
-                            onDelete?(task)
-                            dismiss()
+                            showDeleteConfirmation = true
                         } label: {
                             Label("Delete Task", systemImage: "trash")
                                 .frame(maxWidth: .infinity)
@@ -187,6 +187,15 @@ struct EditTaskView: View {
                 }
             }
             .onAppear { loadFromTask() }
+            .alert("Delete Task", isPresented: $showDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    onDelete?(task)
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete this task?")
+            }
         }
     }
 
@@ -207,17 +216,9 @@ struct EditTaskView: View {
             endTime = end
         }
         
-        // Try to read optional fields via KVC (Core Data backed)
-        if let managed = task as? NSManagedObject {
-            if let raw = managed.value(forKey: "priority") as? Int {
-                priority = PriorityLevel(rawValue: raw) ?? .medium
-            } else if let raw16 = managed.value(forKey: "priority") as? Int16 {
-                priority = PriorityLevel(rawValue: Int(raw16)) ?? .medium
-            }
-            if let color = (managed.value(forKey: "colorHex") as? String) ?? (managed.value(forKey: "color") as? String) {
-                selectedColorHex = color
-            }
-        }
+        // Read priority and color directly from TaskEntity
+        priority = task.priority
+        selectedColorHex = task.colorHex
     }
 
     private func saveAndDismiss() {
@@ -230,27 +231,9 @@ struct EditTaskView: View {
         updatedTask.location = location.isEmpty ? nil : location
         updatedTask.isDone = isDone
         
-        // Try to write optional fields via KVC if supported
-        if let managed = updatedTask as? NSManagedObject {
-            // Write priority as Int if possible, otherwise as Int16
-            if let _ = managed.entity.attributesByName["priority"],
-               let attributeType = managed.entity.attributesByName["priority"]?.attributeType {
-                switch attributeType {
-                case .integer16AttributeType:
-                    managed.setValue(Int16(priority.rawValue), forKey: "priority")
-                case .integer32AttributeType, .integer64AttributeType:
-                    managed.setValue(priority.rawValue, forKey: "priority")
-                default:
-                    break
-                }
-            }
-            // Prefer colorHex, fall back to color
-            if managed.entity.attributesByName.keys.contains("colorHex") {
-                managed.setValue(selectedColorHex, forKey: "colorHex")
-            } else if managed.entity.attributesByName.keys.contains("color") {
-                managed.setValue(selectedColorHex, forKey: "color")
-            }
-        }
+        // Update priority and color directly
+        updatedTask.priority = priority
+        updatedTask.colorHex = selectedColorHex
         
         task = updatedTask
         onSave?(updatedTask)
@@ -258,16 +241,7 @@ struct EditTaskView: View {
     }
 }
 
-private enum PriorityLevel: Int, CaseIterable, Identifiable {
-    case low = 0, medium = 1, high = 2
-    var id: Int { rawValue }
-    var title: String {
-        switch self { case .low: return "Low"; case .medium: return "Medium"; case .high: return "High" }
-    }
-    var tint: Color {
-        switch self { case .low: return .green; case .medium: return .orange; case .high: return .red }
-    }
-}
+
 
 private let colorChoices: [String] = [
     "#4F8EF7", // blue
@@ -285,25 +259,7 @@ private func isOverdue(date: Date, isDone: Bool) -> Bool {
     return target < today
 }
 
-private extension Color {
-    init(hex: String) {
-        let hexSanitized = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hexSanitized).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hexSanitized.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (255, 0, 122, 255)
-        }
-        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
-    }
-}
+
 
 private struct CardSection<Content: View>: View {
     var title: String?
