@@ -17,8 +17,15 @@ struct LottiefilesAnimation: View {
         LottieView(animation: .named("Rocket loader"))
             .playbackMode(.playing(.toProgress(1, loopMode: .playOnce)))
             .animationDidFinish { completed in
-                isActive = false
+                withAnimation(.easeInOut(duration: 1.2)) {
+                    isActive = false
+                }
             }
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.white)
+            .ignoresSafeArea()
             .onAppear() {
                 playSound("intro", "mp3")
             }

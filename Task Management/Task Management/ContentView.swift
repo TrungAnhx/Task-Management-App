@@ -12,12 +12,13 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             Home()
+                .scaleEffect(isSplashActive ? 0.9 : 1)
                 .opacity(isSplashActive ? 0 : 1)
-                .animation(.easeIn(duration: 0.4), value: isSplashActive)
+                .animation(.easeOut(duration: 1.0), value: isSplashActive)
             
             if isSplashActive {
                 LottiefilesAnimation(isActive: $isSplashActive)
-                    .transition(.opacity.animation(.easeInOut(duration: 0.4)))
+                    .transition(.opacity)
             }
             
         }
